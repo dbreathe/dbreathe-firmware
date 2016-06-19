@@ -2,15 +2,28 @@
 // By Shervin Emami (www.shervinemami.info)
 // Based on the Ketose detector by Jens Clarholm (www.jenslabs.com)
 
-#include <math.h>
-#include "DHT.h"
+#include <Arduino.h>
+
+// WebSockets server for Arduino ("https://github.com/Links2004/arduinoWebSockets")
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
+#include <WebSocketsServer.h>
+#include <Hash.h>
+
+ESP8266WiFiMulti WiFiMulti;
+WebSocketsServer webSocket = WebSocketsServer(81);
+#define USE_SERIAL Serial
+
 
 // TGS882 sensor
 const int gasValuePin = A0;
 
 const int ledPin = 2;
 
+
 // DHT22 Humidity & temperature sensor
+#include <math.h>
+#include "DHT.h"
 const int humidityPin = 4;
 // Uncomment whatever type you're using!
 //#define DHTTYPE DHT11   // DHT 11
@@ -23,6 +36,7 @@ const int humidityPin = 4;
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(humidityPin, DHTTYPE);
 
+
 int currentMode=1;
 
 // Read gas variables
@@ -30,8 +44,7 @@ int tempRead1 = 0;
 int tempRead2 = 0;
 int tempRead3 = 0;
 
-// General Var
-float R0 = 4500;
+const float R0 = 4500;
 
 double currentHumidity;
 double currentTemperature;
@@ -40,24 +53,49 @@ double scalingFactor;
 int measurement = 0;
 
 
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght) {
 
-// Temperature sensor function, values has been hardcoded to humidity = 60 and temperature = 28 to speed up the measuring.
-int tempHumidityCompensation(int value){
-    //int chk = DHT11.read(DHT11PIN);
-    //delay(300);
-    //currentHumidity = ((double)DHT11.humidity);
-    //Hardcoded after realizing that the temperature and humidity were beahaving stabilly.
-    currentHumidity = 60;
-    //currentTemperature = ((double)DHT11.temperature);
-    currentTemperature = 28;
+    switch(type) {
+        case WStype_DISCONNECTED:
+            USE_SERIAL.printf("[%u] Disconnected!\n", num);
+            break;
+        case WStype_CONNECTED:
+            {
+                IPAddress ip = webSocket.remoteIP(num);
+                USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+        
+        // send message to client
+        webSocket.sendTXT(num, "Connected");
+            }
+            break;
+        case WStype_TEXT:
+            USE_SERIAL.printf("[%u] get Text: %s\n", num, payload);
+
+            // send message to client
+            // webSocket.sendTXT(num, "message here");
+
+            // send data to all connected clients
+            // webSocket.broadcastTXT("message here");
+            break;
+        case WStype_BIN:
+            USE_SERIAL.printf("[%u] get binary lenght: %u\n", num, lenght);
+            hexdump(payload, lenght);
+
+            // send message to client
+            // webSocket.sendBIN(num, payload, lenght);
+            break;
+    }
+
+}
+
+
+// Temperature sensor function, with humidity as a percentage and temperature as degrees Celcius.
+int tempHumidityCompensation(int value, float currentHumidity, float currentTemperature)
+{
+    //currentHumidity = 60;
+    //currentTemperature = 28;
     //function derrived from regression analysis of the graph in the datasheet
     scalingFactor = (((currentTemperature * -0.02573)+1.898)+((currentHumidity*-0.011)+0.3966));
-    //debug
-    //clearLcd();
-    //printToRow1("Scalefactor:");
-    //printFloatToCurrentCursorPossition((float)scalingFactor);
-    //delay(1000);
-    //debugstop*/
     double scaledValue = value * scalingFactor;
     return (int)scaledValue; 
 }
@@ -105,6 +143,14 @@ float acetoneResistanceToPPMf(float resistance){
 }
 
 
+float ppmToMmol(float PPMf)
+{
+  float ppmInmmol = ((PPMf / 1000.0f) / 58.08f);
+  ppmInmmol = ppmInmmol * 1000.0f;
+  return ppmInmmol;
+}
+
+
 // Read three times from gas sensor with 5ms between each reading
 void readsensor() {
   tempRead1 = analogRead(0);
@@ -127,17 +173,38 @@ void setup() {
   // Initialize the DHT humidity sensor
   dht.begin();
 
-  Serial.println("Waiting for sensors to stabilize");
 /*  
   //Warmup, check that sensor is stabile.
   while (checkIfSensorIsStabile() == false){
     checkIfSensorIsStabile();
   }
 */
+
+  // Initialize the WebSockets server
+  // Serial.setDebugOutput(true);
+  USE_SERIAL.setDebugOutput(true);
+  USE_SERIAL.println();
+  USE_SERIAL.println();
+  USE_SERIAL.println();  
+  for (uint8_t t = 4; t > 0; t--) {
+      USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
+      USE_SERIAL.flush();
+      delay(1000);
+  }
+  WiFiMulti.addAP("breath", "breath##");
+  while(WiFiMulti.run() != WL_CONNECTED) {
+      delay(100);
+  }
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+    
+  Serial.println("Waiting for sensors to stabilize");
+
   // Just wait 30 seconds
   delay(30000);
+  
 
-  //read three times from gas sensor with 5ms between each reading
+  // Read three times from gas sensor with 5ms between each reading
   readsensor();
 
   // Initialize the measurement
@@ -154,50 +221,63 @@ void setup() {
 // Special Arduino main loop callback function
 void loop() {
   digitalWrite(ledPin, HIGH);
+
+  // Keep the WebSockets server socket alive
+  webSocket.loop();
   
   //read three times from gas sensor with 5ms between each reading
   readsensor();
   measurement = runningAverage(measurement, tempRead1);
   measurement = runningAverage(measurement, tempRead2);
   measurement = runningAverage(measurement, tempRead3);
+
+  // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  float humidity = dht.readHumidity();
+  // Read temperature as Celsius (the default)
+  float temperature = dht.readTemperature();
   
-  int compensated = tempHumidityCompensation(measurement);
+  int compensated = tempHumidityCompensation(measurement, humidity, temperature);
   float resistance = toResistance(compensated);
   float ppmf = acetoneResistanceToPPMf(resistance);
+  float mmol = ppmToMmol(ppmf);
+
+  // Publish our results through Wifi!
+  char str[512];
+  snprintf(str, sizeof(str), "mmol=%.2f, ppmf=%.2f, measurement=%.2f, humidity=%.2f, temperature=%.2f", mmol, ppmf, measurement, humidity, temperature);
+  webSocket.broadcastTXT(str);
   
   digitalWrite(ledPin, LOW);
 
-  Serial.print("Measurement: ");
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(humidity) || isnan(temperature)) {
+    Serial.println("Failed to read from DHT sensor!");
+  }
+  else {
+    Serial.print("Humidity: ");
+    Serial.print((int)humidity);
+    Serial.print("%  ");
+    Serial.print("Temperature: ");
+    Serial.print(temperature);
+    Serial.print(" *C ");
+  }
+  Serial.print("      ");
+
+  Serial.print("Gas (V): ");
   Serial.print(measurement);
   Serial.print("   ");
   //Serial.print(resistance);
   //Serial.print(" ");
   Serial.print("PPMF: ");
   Serial.print(ppmf);
-  Serial.print("          ");
+  Serial.print("   ");
+  Serial.print("MMOL: ");
+  Serial.print(mmol);
 
-  delay(1000);
+  Serial.println();  
   
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float t = dht.readTemperature();
-  
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t)) {
-    Serial.println("Failed to read from DHT sensor!");
-    return;
-  }
-  
-  Serial.print("Humidity: ");
-  Serial.print((int)h);
-  Serial.print("%  ");
-  Serial.print("Temperature: ");
-  Serial.print(t);
-  Serial.print(" *C ");
-  Serial.println();
     
+  delay(1000);
 }
 
 
