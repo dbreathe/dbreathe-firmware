@@ -100,8 +100,14 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
 // Temperature sensor function, with humidity as a percentage and temperature as degrees Celcius.
 int tempHumidityCompensation(int value, float currentHumidity, float currentTemperature)
 {
-    //currentHumidity = 60;
-    //currentTemperature = 28;
+    // Check if any reads failed and exit early (to try again).
+    if (isnan(currentHumidity) || currentHumidity > 100 || currentHumidity < 1) {
+      currentHumidity = 98;
+    }
+    if (isnan(currentTemperature) || currentTemperature > 50 || currentTemperature < -20) {
+      currentTemperature = 30;      
+    }
+
     //function derrived from regression analysis of the graph in the datasheet
     scalingFactor = (((currentTemperature * -0.02573)+1.898)+((currentHumidity*-0.011)+0.3966));
     double scaledValue = value * scalingFactor;
