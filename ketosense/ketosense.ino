@@ -53,6 +53,14 @@ double scalingFactor;
 int measurement = 0;
 
 
+// Milli-seconds between WebSockets update
+const int WEB_TICK_MS = 10;
+// Milli-seconds between sensor updates
+const int UPDATE_TICKS = 1000 / WEB_TICK_MS;
+
+int updateCountDown = UPDATE_TICKS;
+
+
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght) {
 
     switch(type) {
@@ -219,65 +227,74 @@ void setup() {
 
 
 // Special Arduino main loop callback function
-void loop() {
-  digitalWrite(ledPin, HIGH);
-
-  // Keep the WebSockets server socket alive
+void loop()
+{
+  // Keep the WebSockets server socket alive atleast 100 times per second!
   webSocket.loop();
-  
-  //read three times from gas sensor with 5ms between each reading
-  readsensor();
-  measurement = runningAverage(measurement, tempRead1);
-  measurement = runningAverage(measurement, tempRead2);
-  measurement = runningAverage(measurement, tempRead3);
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float humidity = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float temperature = dht.readTemperature();
-  
-  int compensated = tempHumidityCompensation(measurement, humidity, temperature);
-  float resistance = toResistance(compensated);
-  float ppmf = acetoneResistanceToPPMf(resistance);
-  float mmol = ppmToMmol(ppmf);
+  // Sleep about 10ms
+  delay(WEB_TICK_MS);
 
-  // Publish our results through Wifi!
-  char str[512];
-  snprintf(str, sizeof(str), "mmol=%.2f, ppmf=%.2f, measurement=%.2f, humidity=%.2f, temperature=%.2f", mmol, ppmf, measurement, humidity, temperature);
-  webSocket.broadcastTXT(str);
-  
-  digitalWrite(ledPin, LOW);
+  updateCountDown--;
 
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(humidity) || isnan(temperature)) {
-    Serial.println("Failed to read from DHT sensor!");
+  // Only do a sensor update roughly once per second
+  if (updateCountDown <= 0) {
+    updateCountDown = UPDATE_TICKS;
+    digitalWrite(ledPin, HIGH);
+      
+    //read three times from gas sensor with 5ms between each reading
+    readsensor();
+    measurement = runningAverage(measurement, tempRead1);
+    measurement = runningAverage(measurement, tempRead2);
+    measurement = runningAverage(measurement, tempRead3);
+  
+    // Reading temperature or humidity takes about 250 milliseconds!
+    // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+    float humidity = dht.readHumidity();
+    // Read temperature as Celsius (the default)
+    float temperature = dht.readTemperature();
+    
+    int compensated = tempHumidityCompensation(measurement, humidity, temperature);
+    float resistance = toResistance(compensated);
+    float ppmf = acetoneResistanceToPPMf(resistance);
+    float mmol = ppmToMmol(ppmf);
+  
+    // Publish our results through Wifi!
+    char str[512];
+    snprintf(str, sizeof(str), "%d,%d,%d,%d,%d", (int)(mmol*1000.0f), (int)(ppmf*1000.0f), (int)(measurement*1.0f), (int)(humidity*1000.0f), (int)(temperature*1000.0f));
+    webSocket.broadcastTXT(str);
+    
+    digitalWrite(ledPin, LOW);
+  
+    // Check if any reads failed and exit early (to try again).
+    if (isnan(humidity) || isnan(temperature)) {
+      Serial.println("Failed to read from DHT sensor!");
+    }
+    else {
+      Serial.print("Humidity: ");
+      Serial.print((int)humidity);
+      Serial.print("%  ");
+      Serial.print("Temperature: ");
+      Serial.print(temperature);
+      Serial.print(" *C ");
+    }
+    Serial.print("      ");
+  
+    Serial.print("Gas (V): ");
+    Serial.print(measurement);
+    Serial.print("   ");
+    //Serial.print(resistance);
+    //Serial.print(" ");
+    Serial.print("PPMF: ");
+    Serial.print(ppmf);
+    Serial.print("   ");
+    Serial.print("MMOL: ");
+    Serial.print(mmol);
+  
+    Serial.println();  
   }
-  else {
-    Serial.print("Humidity: ");
-    Serial.print((int)humidity);
-    Serial.print("%  ");
-    Serial.print("Temperature: ");
-    Serial.print(temperature);
-    Serial.print(" *C ");
-  }
-  Serial.print("      ");
-
-  Serial.print("Gas (V): ");
-  Serial.print(measurement);
-  Serial.print("   ");
-  //Serial.print(resistance);
-  //Serial.print(" ");
-  Serial.print("PPMF: ");
-  Serial.print(ppmf);
-  Serial.print("   ");
-  Serial.print("MMOL: ");
-  Serial.print(mmol);
-
-  Serial.println();  
   
     
-  delay(1000);
 }
 
 
