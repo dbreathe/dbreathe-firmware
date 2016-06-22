@@ -1,5 +1,12 @@
+# Ketosense Arduino code for ESP8266 or NodeMCU.
+Developed mostly by Shervin Emami (shervin.emami@gmail.com), Steve Dalton and Miles Gooding,
+initially for our team's GoldCoast StartupWeekend Health competition in 2016.
+
+Website: (http://dbreathe.launchrock.com/)
+
+# Parts costs (in single and larger quantities):
 ```
-* Parts costs:                        Single:     Bulk (100):  URL:   
+* Part:                               Single:     Bulk (100):  URL:   
 - TGS822 gas sensor:                  USD$5.76    USD$4.25     (http://www.aliexpress.com/item/Free-shipping-1pcs-TGS822-combustible-gas-sensor-IN-STOCK/32601023512.html)  
 - DHT22 humidity & temp sensor:       USD$2.03    USD$1.00     (http://www.aliexpress.com/item/1-PC-New-AM2320-Digital-Temperature-Humidity-Sensor-Replace-AM2302-SHT10-for-Arduino-VEH49-P50/32664649463.html)  
 - ESP8266 or NodeMCU dev board:       USD$2.60    USD$2.60     (http://www.aliexpress.com/item/Smart-Electronics-D1-mini-Mini-NodeMcu-4M-bytes-Lua-WIFI-Internet-of-Things-development-board-based/32630067955.html)  
@@ -10,4 +17,5 @@
 - Extra components & wires:           USD$0.20    USD$0.01     (3 resistors, wires)  
 * TOTAL:                              USD$15.24   USD$12.14      
 ```
+(Note that if you search harder and find good contacts in China, you should be able to find cheaper parts in 1000+ quantity or atleast a cheaper Gas sensor!)
 
