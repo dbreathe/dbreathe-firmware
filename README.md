@@ -1,5 +1,4 @@
-::
-    
+` 
 ** Parts costs:                          Single:     Bulk (100): URL: **
 >>
 - TGS822 gas sensor:                  USD$5.76    USD$4.25    [link](http://www.aliexpress.com/item/Free-shipping-1pcs-TGS822-combustible-gas-sensor-IN-STOCK/32601023512.html)
@@ -10,7 +9,5 @@
 - Enclosure:                          USD$0.87    USD$0.50    [link](http://www.aliexpress.com/item/1Pcs-New-DIY-Black-Electronic-Project-Box-Enclosure-Instrument-case-100x60x25mm-Free-Shipping-Wholesale/32660837716.htm)
 - PCB:                                USD$1.00    USD$1.00
 - Extra components & wires:           USD$0.20    USD$0.01    (3 resistors, wires)
-
 ** TOTAL:                               USD$15.24   USD$12.14 **
-
-
+`
