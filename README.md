@@ -1,3 +1,4 @@
+```
 `* Parts costs:                        Single:     Bulk (100):  URL: `  
 `* TGS822 gas sensor:                  USD$5.76    USD$4.25     `[link](http://www.aliexpress.com/item/Free-shipping-1pcs-TGS822-combustible-gas-sensor-IN-STOCK/32601023512.html)  
 `* DHT22 humidity & temp sensor:       USD$2.03    USD$1.00     `[link](http://www.aliexpress.com/item/1-PC-New-AM2320-Digital-Temperature-Humidity-Sensor-Replace-AM2302-SHT10-for-Arduino-VEH49-P50/32664649463.html)  
@@ -8,4 +9,4 @@
 `* PCB:                                USD$1.00    USD$1.00     `  
 `* Extra components & wires:           USD$0.20    USD$0.01     `(3 resistors, wires)  
 `* TOTAL:                              USD$15.24   USD$12.14    `  
-
+```
