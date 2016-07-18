@@ -9,26 +9,20 @@
 #include <ESP8266WiFiMulti.h>
 #include <WebSocketsServer.h>
 #include <Hash.h>
+#include <Adafruit_NeoPixel.h>
 
 ESP8266WiFiMulti WiFiMulti;
 WebSocketsServer webSocket = WebSocketsServer(81);
 #define USE_SERIAL Serial
 
-
 // TGS882 sensor
 const int gasValuePin = A0;
-
-const int ledPin = 2;
-
 
 // DHT22 Humidity & temperature sensor
 #include <math.h>
 #include "DHT.h"
-const int humidityPin = 4;
-// Uncomment whatever type you're using!
-//#define DHTTYPE DHT11   // DHT 11
+const int humidityPin = 13;
 #define DHTTYPE   DHT22   // DHT 22  (AM2302), AM2321
-//#define DHTTYPE DHT21   // DHT 21 (AM2301)
 
 // Initialize DHT sensor.
 // Note that older versions of this library took an optional third parameter to
@@ -180,7 +174,7 @@ void readsensor() {
 void setup() {
   Serial.begin(9600);      // open the serial port at 9600 bps:    
 
-  pinMode(ledPin,OUTPUT);
+  // TODO: Neopixel output
     
   pinMode(gasValuePin,INPUT);
 
@@ -246,7 +240,8 @@ void loop()
   // Only do a sensor update roughly once per second
   if (updateCountDown <= 0) {
     updateCountDown = UPDATE_TICKS;
-    digitalWrite(ledPin, HIGH);
+    
+    // TODO: Neopixel output
       
     //read three times from gas sensor with 5ms between each reading
     readsensor();
@@ -269,8 +264,8 @@ void loop()
     char str[512];
     snprintf(str, sizeof(str), "%d,%d,%d,%d,%d", (int)(mmol*1000.0f), (int)(ppmf*1000.0f), (int)(measurement*1.0f), (int)(humidity*1000.0f), (int)(temperature*1000.0f));
     webSocket.broadcastTXT(str);
-    
-    digitalWrite(ledPin, LOW);
+
+    // TODO: Neopixel output
   
     // Check if any reads failed and exit early (to try again).
     if (isnan(humidity) || isnan(temperature)) {
