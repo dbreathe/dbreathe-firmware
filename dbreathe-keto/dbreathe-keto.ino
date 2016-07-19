@@ -6,12 +6,11 @@
 
 // WebSockets server for Arduino ("https://github.com/Links2004/arduinoWebSockets")
 #include <ESP8266WiFi.h>
-#include <ESP8266WiFiMulti.h>
+#include <WiFiClient.h> 
 #include <WebSocketsServer.h>
 #include <Hash.h>
 #include <Adafruit_NeoPixel.h>
 
-ESP8266WiFiMulti WiFiMulti;
 WebSocketsServer webSocket = WebSocketsServer(81);
 #define USE_SERIAL Serial
 
@@ -175,10 +174,9 @@ void readsensor() {
 
 // Special Arduino initialization callback function
 void setup() {
-  Serial.begin(9600);      // open the serial port at 9600 bps:
+  Serial.begin(9600);      
 
   pixels.begin(); // This initializes the NeoPixel library.
-
   pixels.setPixelColor(0, pixels.Color(150, 0, 0));
   pixels.show();
 
@@ -198,10 +196,18 @@ void setup() {
     USE_SERIAL.flush();
     delay(1000);
   }
-  WiFiMulti.addAP("breath", "breath##");
-  while (WiFiMulti.run() != WL_CONNECTED) {
-    delay(100);
-  }
+
+  IPAddress local_ip(192,168,88,251);
+  IPAddress gateway(192,168,88,1);
+  IPAddress subnet(255,255,255,0);
+  WiFi.softAPConfig(local_ip, gateway, subnet);
+
+  WiFi.softAP("dbreathe", "dbreathe##");
+
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(myIP);
+  
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
 
